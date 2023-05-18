@@ -44,12 +44,14 @@ parser = argparse.ArgumentParser(
 parser.add_argument('--input', required=True)
 parser.add_argument('--output', required=True)
 parser.add_argument('--model', required=True)
+parser.add_argument('--image',required=False)
 
 if __name__ == '__main__':
     args = parser.parse_args()
     image_path = args.input
     output_folder = args.output
     checkpoint = args.model
+    # if_image = args.image
     image_path_list = []
     for root, dirs, files in os.walk(image_path, topdown=False):
         for name in files:
@@ -114,24 +116,24 @@ if __name__ == '__main__':
         gn = torch.tensor(image_src.shape)[[1, 0, 1, 0]]  # normalization gain whwh
         if len(det)>0:
             det[:, :4] = Inferer.rescale(image.shape[2:], det[:, :4], image_src.shape).round()
-            info = det[:,4:].cpu().detach().numpy()
+            info = det[:,:].cpu().detach().numpy()
             image_name = image_path_list[i].split('\\')[-1]
             out_image_path = os.path.join(post_image_folder,image_name)
             # print(out_image_path,'name')
             imgname = np.array(len(info) * [os.path.abspath(image_path_list[i])])
+             
             infos.append(info)
             names.append(imgname)
             for *xyxy, conf, cls in reversed(det):
                 class_num = int(cls)
                 label = None if hide_labels else (class_names[class_num] if hide_conf else f'{class_names[class_num]} {conf:.2f}')
                 Inferer.plot_box_and_label(image_ori, max(round(sum(image_ori.shape) / 2 * 0.003), 2), xyxy, label, color=Inferer.generate_colors(class_num, True))
-            # print(out_image_path)
             cv2.imwrite(out_image_path,image_ori)
-        if (i%1000 == 0) & (len(infos)>0):
+        if (i%2000 == 0) & (len(infos)>0):
             infos = np.concatenate(infos,axis = 0)
             names = np.concatenate(names).reshape(-1,1)
             infos = np.concatenate([infos,names],axis = 1)
-            pd.DataFrame(infos,columns=['Conf','Class','FileName']).to_csv(os.path.join(pred_res_folder,'{}.csv'.format(i)),index = False)
+            pd.DataFrame(infos,columns=['X1','Y1','X2','Y2','Conf','Class','FileName']).to_csv(os.path.join(pred_res_folder,'{}.csv'.format(i)),index = False)
             infos = []
             names = []
 
