@@ -97,7 +97,7 @@ if __name__ == '__main__':
     infos = []
     names = []
     for i in tqdm(range(cur_progress+1,len(image_path_list))):
-        image_src = cv2.imread(os.path.join(image_path,image_path_list[i]))
+        image_src = cv2.imread(image_path_list[i])
         if image_src is None:
             continue
         image_ori = image_src.copy()
@@ -117,11 +117,10 @@ if __name__ == '__main__':
         if len(det)>0:
             det[:, :4] = Inferer.rescale(image.shape[2:], det[:, :4], image_src.shape).round()
             info = det[:,:].cpu().detach().numpy()
-            image_name = image_path_list[i].split('\\')[-1]
-            out_image_path = os.path.join(post_image_folder,image_name)
-            # print(out_image_path,'name')
+            # image_name = image_path_list[i].split('\\')[-1]
             imgname = np.array(len(info) * [os.path.abspath(image_path_list[i])])
-             
+            image_name = os.path.abspath(image_path_list[i]).replace('\\','_')
+            out_image_path = os.path.join(post_image_folder,image_name)
             infos.append(info)
             names.append(imgname)
             for *xyxy, conf, cls in reversed(det):
@@ -136,5 +135,9 @@ if __name__ == '__main__':
             pd.DataFrame(infos,columns=['X1','Y1','X2','Y2','Conf','Class','FileName']).to_csv(os.path.join(pred_res_folder,'{}.csv'.format(i)),index = False)
             infos = []
             names = []
+    infos = np.concatenate(infos,axis = 0)
+    names = np.concatenate(names).reshape(-1,1)
+    infos = np.concatenate([infos,names],axis = 1)
+    pd.DataFrame(infos,columns=['X1','Y1','X2','Y2','Conf','Class','FileName']).to_csv(os.path.join(pred_res_folder,'{}.csv'.format(i)),index = False)
 
         

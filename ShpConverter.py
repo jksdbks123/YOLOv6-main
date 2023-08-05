@@ -19,6 +19,7 @@ parser = argparse.ArgumentParser(
                 description = 'Detect Milkweeeds',
                 epilog = '')
 parser.add_argument('--input', required=True, help = 'the Results folder')
+parser.add_argument('--label', required=False, help = 'path to labeled images')
 parser.add_argument('--output', required=True)
 parser.add_argument('--shp', required=True, help= 'shp file that contains the geolocations')
 
@@ -27,8 +28,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     input_path = args.input
     output_folder = args.output
-    shp_path = args.model
-
+    shp_path = args.shp
+    labeled_img_folder = args.label
     route_locations = geopandas.read_file(shp_path)
     Detection_sheet_list = os.listdir(input_path)
     total_detection = []
@@ -40,6 +41,8 @@ if __name__ == '__main__':
     ratioes = []
     confs = []
     image_names = []
+    labeled_image_names = []
+
     for ind in tqdm(range(len(total_detection))):
         data_info = total_detection.iloc[ind]
         Conf = data_info.Conf
@@ -48,12 +51,15 @@ if __name__ == '__main__':
         height = data_info.Y2 - data_info.Y1
         ratio = length*height/(image_size[0]*image_size[1])
         info_location = data_info.FileName.split('\\')
+        # print(info_location[-1].split('.')[0].split('_'))
         frame_ind = int(info_location[-1].split('.')[0].split('_')[1])
         session = info_location[-4]
         if len(route_locations.loc[(route_locations.SESSION_NA == session)&(route_locations.FRAME == frame_ind)]) == 0:
             continue
         location_index = route_locations.loc[(route_locations.SESSION_NA == session)&(route_locations.FRAME == frame_ind)].index[0]
-        
+        labeled_img_name = os.path.abspath(data_info.FileName).replace('\\','_').split(':')[1]
+        labeled_img_path = os.path.join(labeled_img_folder,labeled_img_name)
+        labeled_image_names.append(labeled_img_path)
         geometries.append(route_locations.iloc[location_index].geometry)
         image_names.append(data_info.FileName)
         valid_classes.append(data_info.Class)
@@ -64,6 +70,7 @@ if __name__ == '__main__':
     'Ratio':ratioes,
     'Conf':confs,
     'Path':image_names,
+    'LabelPath':labeled_image_names,
     'geometry':geometries
         })
     gdf = geopandas.GeoDataFrame(geoframes, geometry="geometry")
